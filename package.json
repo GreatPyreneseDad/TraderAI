@@ -4,10 +4,9 @@
   "description": "Unified Market Intelligence System combining ECNE Data River, GCT Market Sentiment, and Claude AI",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:dashboard\"",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "nodemon src/server.ts",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:dashboard": "cd dashboard && npm run dev",
     "build": "npm run build:backend && npm run build:frontend && npm run build:dashboard",
     "build:backend": "tsc",
     "build:frontend": "cd frontend && npm run build",
