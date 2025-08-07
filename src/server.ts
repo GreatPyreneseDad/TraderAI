@@ -99,6 +99,12 @@ async function initializeServices() {
       dbService.saveAlert(alert);
     });
 
+    // Store services in app locals for access in routes
+    app.locals.claudeService = claudeService;
+    app.locals.gctService = gctService;
+    app.locals.ecneService = ecneService;
+    app.locals.dbService = dbService;
+
   } catch (error) {
     logger.error('Failed to initialize services:', error);
     process.exit(1);
