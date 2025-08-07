@@ -1,0 +1,6 @@
+[submodule "ecne-core"]
+	path = ecne-core
+	url = https://github.com/GreatPyreneseDad/ECNE.git
+[submodule "gct-market"]
+	path = gct-market
+	url = https://github.com/GreatPyreneseDad/GCT.git

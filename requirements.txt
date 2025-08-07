@@ -1,0 +1,10 @@
+# Python dependencies for GCT integration
+streamlit
+pandas
+numpy
+plotly
+sqlalchemy
+python-dotenv
+aiohttp
+requests
+websocket-client
