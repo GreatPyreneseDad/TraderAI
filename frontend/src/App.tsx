@@ -1,9 +1,10 @@
 import React from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
-import { TrendingUp, Brain, AlertCircle, BarChart3, Home } from 'lucide-react'
+import { TrendingUp, Brain, AlertCircle, BarChart3, Home, MessageSquare } from 'lucide-react'
 import MarketDashboard from './pages/MarketDashboard'
 import InferenceCenter from './pages/InferenceCenter'
 import AlertsPage from './pages/AlertsPage'
+import MarketAnalysisPage from './pages/MarketAnalysisPage'
 import { useWebSocket } from './hooks/useWebSocket'
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Market Analysis', href: '/market', icon: TrendingUp },
+    { name: 'Chat Analysis', href: '/analysis', icon: MessageSquare },
     { name: 'AI Inference', href: '/inference', icon: Brain },
     { name: 'Alerts', href: '/alerts', icon: AlertCircle },
   ]
@@ -68,6 +70,7 @@ function App() {
         <Routes>
           <Route path="/" element={<MarketDashboard />} />
           <Route path="/market" element={<MarketDashboard />} />
+          <Route path="/analysis" element={<MarketAnalysisPage />} />
           <Route path="/inference" element={<InferenceCenter />} />
           <Route path="/alerts" element={<AlertsPage />} />
         </Routes>

@@ -12,8 +12,10 @@ dotenv.config();
 // Import routes
 import marketRoutes from './api/market';
 import inferenceRoutes from './api/inference';
+import inferenceEnhancedRoutes from './api/inference-enhanced';
 import debateRoutes from './api/debate';
 import healthRoutes from './api/health';
+import marketAnalysisRoutes from './api/market-analysis';
 
 // Import services
 import { ECNEService } from './services/ecne-service';
@@ -113,7 +115,9 @@ async function initializeServices() {
 
 // Routes
 app.use('/api/market', marketRoutes);
+app.use('/api/market-analysis', marketAnalysisRoutes);
 app.use('/api/inference', inferenceRoutes);
+app.use('/api/inference-enhanced', inferenceEnhancedRoutes);
 app.use('/api/debate', debateRoutes);
 app.use('/api/health', healthRoutes);
 

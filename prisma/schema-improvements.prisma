@@ -1,0 +1,571 @@
+// Enhanced Prisma schema for TraderAI with performance optimizations
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER MANAGEMENT ====================
+
+model User {
+  id              String       @id @default(uuid())
+  email           String       @unique
+  username        String       @unique
+  passwordHash    String
+  role            UserRole     @default(USER)
+  isActive        Boolean      @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relationships
+  inferences      Inference[]
+  verifications   Verification[]
+  debateVotes     DebateVote[]
+  portfolios      Portfolio[]
+  orders          Order[]
+  tradeAlerts     TradeAlert[]
+  apiKeys         ApiKey[]
+  auditLogs       AuditLog[]
+  
+  @@index([createdAt])
+  @@index([lastLoginAt])
+  @@index([role, isActive])
+}
+
+// ==================== MARKET DATA ====================
+
+model MarketData {
+  id              String       @id @default(uuid())
+  symbol          String
+  timestamp       DateTime
+  
+  // Price data
+  open            Decimal      @db.Decimal(20, 8)
+  high            Decimal      @db.Decimal(20, 8)
+  low             Decimal      @db.Decimal(20, 8)
+  close           Decimal      @db.Decimal(20, 8)
+  
+  // Volume and liquidity
+  volume          BigInt
+  volumeUSD       Decimal?     @db.Decimal(20, 2)
+  bidAskSpread    Decimal?     @db.Decimal(10, 6)
+  
+  // Analytics
+  coherenceScores Json         // {psi, rho, q, f}
+  sentiment       Float?
+  volatility      Float?
+  
+  // Metadata
+  source          String       @default("default")
+  interval        TimeInterval @default(MINUTE_1)
+  createdAt       DateTime     @default(now())
+  
+  // Relationships
+  signals         Signal[]
+  trades          Trade[]
+  
+  @@unique([symbol, timestamp, interval, source])
+  @@index([symbol, timestamp])
+  @@index([symbol])
+  @@index([timestamp])
+  @@index([symbol, close, timestamp])
+  @@index([volume])
+  @@index([source, timestamp])
+}
+
+// ==================== TRADING ENTITIES ====================
+
+model Portfolio {
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  name            String
+  description     String?
+  isActive        Boolean      @default(true)
+  
+  // Portfolio metrics
+  totalValueUSD   Decimal      @db.Decimal(20, 2)
+  cashBalanceUSD  Decimal      @db.Decimal(20, 2)
+  lastUpdated     DateTime     @default(now())
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relationships
+  positions       Position[]
+  orders          Order[]
+  trades          Trade[]
+  performance     PortfolioPerformance[]
+  
+  @@index([userId, isActive])
+  @@index([totalValueUSD])
+}
+
+model Position {
+  id              String       @id @default(uuid())
+  portfolioId     String
+  portfolio       Portfolio    @relation(fields: [portfolioId], references: [id])
+  symbol          String
+  
+  // Position details
+  quantity        Decimal      @db.Decimal(20, 8)
+  averagePrice    Decimal      @db.Decimal(20, 8)
+  currentPrice    Decimal      @db.Decimal(20, 8)
+  
+  // P&L tracking
+  unrealizedPnL   Decimal      @db.Decimal(20, 2)
+  realizedPnL     Decimal      @db.Decimal(20, 2)
+  
+  // Risk metrics
+  stopLoss        Decimal?     @db.Decimal(20, 8)
+  takeProfit      Decimal?     @db.Decimal(20, 8)
+  maxDrawdown     Decimal?     @db.Decimal(10, 4)
+  
+  openedAt        DateTime     @default(now())
+  closedAt        DateTime?
+  updatedAt       DateTime     @updatedAt
+  
+  // Relationships
+  trades          Trade[]
+  
+  @@unique([portfolioId, symbol])
+  @@index([symbol])
+  @@index([portfolioId, closedAt])
+  @@index([unrealizedPnL])
+}
+
+model Order {
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  portfolioId     String
+  portfolio       Portfolio    @relation(fields: [portfolioId], references: [id])
+  
+  // Order details
+  symbol          String
+  side            OrderSide
+  type            OrderType
+  status          OrderStatus  @default(PENDING)
+  
+  // Quantities and prices
+  quantity        Decimal      @db.Decimal(20, 8)
+  price           Decimal?     @db.Decimal(20, 8)  // Null for market orders
+  stopPrice       Decimal?     @db.Decimal(20, 8)  // For stop orders
+  limitPrice      Decimal?     @db.Decimal(20, 8)  // For stop-limit orders
+  
+  // Execution details
+  filledQuantity  Decimal      @default(0) @db.Decimal(20, 8)
+  averagePrice    Decimal?     @db.Decimal(20, 8)
+  commission      Decimal?     @db.Decimal(10, 4)
+  
+  // AI/Strategy metadata
+  strategy        String?
+  signalId        String?
+  signal          Signal?      @relation(fields: [signalId], references: [id])
+  confidence      Float?
+  
+  // Timestamps
+  placedAt        DateTime     @default(now())
+  filledAt        DateTime?
+  cancelledAt     DateTime?
+  expiresAt       DateTime?
+  
+  // Relationships
+  trades          Trade[]
+  
+  @@index([userId, status])
+  @@index([portfolioId, symbol, status])
+  @@index([symbol, side, status])
+  @@index([placedAt])
+  @@index([status, placedAt])
+}
+
+model Trade {
+  id              String       @id @default(uuid())
+  orderId         String
+  order           Order        @relation(fields: [orderId], references: [id])
+  portfolioId     String
+  portfolio       Portfolio    @relation(fields: [portfolioId], references: [id])
+  positionId      String?
+  position        Position?    @relation(fields: [positionId], references: [id])
+  marketDataId    String?
+  marketData      MarketData?  @relation(fields: [marketDataId], references: [id])
+  
+  // Trade details
+  symbol          String
+  side            OrderSide
+  quantity        Decimal      @db.Decimal(20, 8)
+  price           Decimal      @db.Decimal(20, 8)
+  
+  // Costs and fees
+  commission      Decimal      @db.Decimal(10, 4)
+  slippage        Decimal?     @db.Decimal(10, 4)
+  totalCost       Decimal      @db.Decimal(20, 2)
+  
+  // Performance
+  pnl             Decimal?     @db.Decimal(20, 2)
+  pnlPercent      Float?
+  
+  executedAt      DateTime     @default(now())
+  
+  @@index([portfolioId, executedAt])
+  @@index([symbol, executedAt])
+  @@index([orderId])
+  @@index([positionId])
+}
+
+// ==================== AI/ANALYTICS ENTITIES ====================
+
+model Signal {
+  id              String       @id @default(uuid())
+  symbol          String
+  marketDataId    String?
+  marketData      MarketData?  @relation(fields: [marketDataId], references: [id])
+  
+  // Signal details
+  type            SignalType
+  direction       SignalDirection
+  strength        Float        // 0-1 confidence
+  
+  // Target levels
+  entryPrice      Decimal      @db.Decimal(20, 8)
+  stopLoss        Decimal?     @db.Decimal(20, 8)
+  takeProfit      Decimal?     @db.Decimal(20, 8)
+  
+  // Source and validation
+  source          String       // 'coherence', 'ml_model', 'technical', etc.
+  algorithm       String?
+  parameters      Json?
+  
+  // Performance tracking
+  isActive        Boolean      @default(true)
+  hitTarget       Boolean?
+  actualReturn    Float?
+  
+  generatedAt     DateTime     @default(now())
+  expiresAt       DateTime?
+  
+  // Relationships
+  orders          Order[]
+  
+  @@index([symbol, isActive])
+  @@index([generatedAt])
+  @@index([source, generatedAt])
+  @@index([type, direction, strength])
+}
+
+model Inference {
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  query           String
+  context         String?
+  
+  // Trading context
+  symbol          String?
+  timeframe       TimeInterval?
+  
+  // Three-angle responses
+  conservative    Json
+  progressive     Json
+  synthetic       Json
+  
+  selectedOption  String?
+  confidence      Float?
+  status          InferenceStatus @default(PENDING)
+  
+  // Performance tracking
+  accuracy        Float?       // Post-hoc accuracy measurement
+  profitability   Float?       // If inference led to trades
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  verifications   Verification[]
+  debate          Debate?
+  
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([symbol, createdAt])
+  @@index([confidence])
+}
+
+// ==================== MONITORING & ALERTS ====================
+
+model TradeAlert {
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  
+  // Alert configuration
+  name            String
+  type            TradeAlertType
+  symbol          String?
+  condition       Json         // Complex conditions
+  
+  // Trigger settings
+  isActive        Boolean      @default(true)
+  triggerCount    Int          @default(0)
+  lastTriggered   DateTime?
+  cooldownMinutes Int          @default(5)
+  
+  // Notification settings
+  emailEnabled    Boolean      @default(false)
+  pushEnabled     Boolean      @default(true)
+  webhookUrl      String?
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  @@index([userId, isActive])
+  @@index([symbol, type, isActive])
+  @@index([lastTriggered])
+}
+
+model PortfolioPerformance {
+  id              String       @id @default(uuid())
+  portfolioId     String
+  portfolio       Portfolio    @relation(fields: [portfolioId], references: [id])
+  
+  // Time period
+  date            DateTime
+  interval        TimeInterval
+  
+  // Performance metrics
+  startValue      Decimal      @db.Decimal(20, 2)
+  endValue        Decimal      @db.Decimal(20, 2)
+  netReturn       Decimal      @db.Decimal(10, 4)
+  percentReturn   Float
+  
+  // Risk metrics
+  sharpeRatio     Float?
+  maxDrawdown     Float?
+  volatility      Float?
+  beta            Float?
+  
+  // Trading metrics
+  totalTrades     Int
+  winningTrades   Int
+  losingTrades    Int
+  winRate         Float
+  avgWin          Decimal?     @db.Decimal(20, 2)
+  avgLoss         Decimal?     @db.Decimal(20, 2)
+  
+  calculatedAt    DateTime     @default(now())
+  
+  @@unique([portfolioId, date, interval])
+  @@index([portfolioId, date])
+  @@index([date, interval])
+}
+
+// ==================== SECURITY & AUDIT ====================
+
+model ApiKey {
+  id              String       @id @default(uuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id])
+  
+  name            String
+  key             String       @unique
+  permissions     String[]     // ['read', 'trade', 'withdraw']
+  
+  isActive        Boolean      @default(true)
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
+  
+  createdAt       DateTime     @default(now())
+  revokedAt       DateTime?
+  
+  @@index([userId, isActive])
+  @@index([key])
+}
+
+model AuditLog {
+  id              String       @id @default(uuid())
+  userId          String?
+  user            User?        @relation(fields: [userId], references: [id])
+  
+  action          String
+  entityType      String
+  entityId        String?
+  
+  oldValues       Json?
+  newValues       Json?
+  
+  ipAddress       String?
+  userAgent       String?
+  
+  createdAt       DateTime     @default(now())
+  
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}
+
+// ==================== EXISTING MODELS (Enhanced) ====================
+
+model Alert {
+  id              String       @id @default(uuid())
+  type            AlertType
+  severity        AlertSeverity
+  symbol          String?
+  title           String
+  message         String
+  data            Json?
+  
+  // Enhanced tracking
+  source          String?      // Which service generated this
+  correlationId   String?      // Link related alerts
+  
+  acknowledged    Boolean      @default(false)
+  acknowledgedAt  DateTime?
+  acknowledgedBy  String?
+  
+  resolved        Boolean      @default(false)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  
+  createdAt       DateTime     @default(now())
+  
+  @@index([severity, acknowledged, resolved])
+  @@index([symbol, createdAt])
+  @@index([type, severity, createdAt])
+  @@index([correlationId])
+}
+
+model SystemHealth {
+  id              String       @id @default(uuid())
+  service         String
+  status          HealthStatus
+  message         String?
+  
+  // Enhanced metrics
+  metrics         Json?        // CPU, memory, latency, etc.
+  uptime          Int?         // Seconds
+  lastError       String?
+  errorCount      Int          @default(0)
+  
+  // Dependencies
+  dependencies    Json?        // Status of dependent services
+  
+  timestamp       DateTime     @default(now())
+  
+  @@index([service, timestamp])
+  @@index([status, timestamp])
+  @@index([service, status, timestamp])
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  USER
+  TRADER
+  ANALYST
+  ADMIN
+  SYSTEM
+}
+
+enum TimeInterval {
+  MINUTE_1
+  MINUTE_5
+  MINUTE_15
+  MINUTE_30
+  HOUR_1
+  HOUR_4
+  DAY_1
+  WEEK_1
+  MONTH_1
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+  STOP
+  STOP_LIMIT
+  TRAILING_STOP
+}
+
+enum OrderStatus {
+  PENDING
+  SUBMITTED
+  PARTIAL
+  FILLED
+  CANCELLED
+  REJECTED
+  EXPIRED
+}
+
+enum SignalType {
+  ENTRY
+  EXIT
+  STOP_LOSS
+  TAKE_PROFIT
+  SCALE_IN
+  SCALE_OUT
+}
+
+enum SignalDirection {
+  LONG
+  SHORT
+  NEUTRAL
+}
+
+enum TradeAlertType {
+  PRICE_ABOVE
+  PRICE_BELOW
+  VOLUME_SPIKE
+  COHERENCE_CHANGE
+  POSITION_STOP
+  POSITION_TARGET
+  DRAWDOWN_LIMIT
+  SIGNAL_GENERATED
+}
+
+enum InferenceStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum DebatePosition {
+  BULL
+  BEAR
+  NEUTRAL
+}
+
+enum AlertType {
+  COHERENCE_SPIKE
+  MARKET_ANOMALY
+  SYSTEM_ERROR
+  API_LIMIT
+  DEBATE_CONSENSUS
+  TRADE_EXECUTED
+  POSITION_ALERT
+  RISK_WARNING
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum HealthStatus {
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+  OFFLINE
+}

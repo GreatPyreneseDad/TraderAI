@@ -120,4 +120,72 @@ export const api = {
     const response = await apiClient.get('/health')
     return response.data
   },
+
+  // Market Analysis endpoints (PandasAI)
+  analyzeMarket: async (data: {
+    query: string
+    symbols?: string[]
+    timeframe?: string
+    useCache?: boolean
+  }) => {
+    const response = await apiClient.post('/market-analysis/query', data)
+    return response.data
+  },
+
+  generateInsights: async (symbols: string[]) => {
+    const response = await apiClient.post('/market-analysis/insights', { symbols })
+    return response.data
+  },
+
+  detectAnomalies: async (symbols?: string[]) => {
+    const response = await apiClient.post('/market-analysis/anomalies', { symbols })
+    return response.data
+  },
+
+  generateTradingSignals: async (strategy: string, symbols: string[]) => {
+    const response = await apiClient.post('/market-analysis/signals', { strategy, symbols })
+    return response.data
+  },
+
+  getAnalysisSuggestions: async (context?: string) => {
+    const response = await apiClient.get('/market-analysis/suggestions', {
+      params: { context }
+    })
+    return response.data
+  },
+
+  batchAnalyze: async (queries: Array<{ query: string; symbols?: string[] }>, timeframe?: string) => {
+    const response = await apiClient.post('/market-analysis/batch', { queries, timeframe })
+    return response.data
+  },
+
+  // Enhanced Inference endpoints (PandasAI + Claude)
+  generateEnhancedInference: async (data: {
+    query: string
+    context?: string
+    userId: string
+    symbols?: string[]
+    analysisQuery?: string
+  }) => {
+    const response = await apiClient.post('/inference-enhanced/generate-enhanced', data)
+    return response.data
+  },
+
+  generateInferenceWithAnomalies: async (data: {
+    query: string
+    userId: string
+    symbols?: string[]
+  }) => {
+    const response = await apiClient.post('/inference-enhanced/generate-with-anomalies', data)
+    return response.data
+  },
+
+  generateInferenceWithSignals: async (data: {
+    strategy: string
+    symbols: string[]
+    userId: string
+  }) => {
+    const response = await apiClient.post('/inference-enhanced/generate-with-signals', data)
+    return response.data
+  },
 }

@@ -18,10 +18,13 @@ services:
       CLAUDE_API_KEY: ${CLAUDE_API_KEY}
       TIINGO_API_TOKEN: ${TIINGO_API_TOKEN}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      PANDAS_AI_SERVICE_URL: http://pandas-ai:8001
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      pandas-ai:
         condition: service_healthy
     ports:
       - "3000:3000"
@@ -132,6 +135,45 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    networks:
+      - traderai-network
+
+  pandas-ai:
+    build:
+      context: ./pandas-ai-service
+      dockerfile: Dockerfile
+    container_name: traderai-pandas-ai
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis123}
+      DATABASE_URL: postgresql://${DB_USER:-traderai}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-traderai}
+      LOG_LEVEL: INFO
+      CACHE_TTL: 300
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
     networks:
       - traderai-network
 
