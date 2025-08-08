@@ -102,6 +102,10 @@ class TestGCTBasalIntegration:
         assert result is not None
         assert isinstance(result.traditional_gct, GCTDimensions)
         assert isinstance(result.basal_enhanced_gct, GCTDimensions)
+        assert hasattr(result, 'enhanced_gct_dimensions')
+        assert hasattr(result, 'stability_state')
+        assert hasattr(result, 'market_coherence_score')
+        assert hasattr(result, 'distortion_factor')
         assert 0.0 <= result.prediction_confidence <= 1.0
         assert 0.0 <= result.symbolic_resonance <= 1.0
         

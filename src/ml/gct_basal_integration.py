@@ -18,6 +18,12 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 
 from .basal_reservoir_engine import BasalReservoirEngine, BasalReservoirConfig, GCTDimensions
+from .enhanced_gct_framework import (
+    EnhancedGCTCalculator, 
+    EnhancedGCTDimensions,
+    MarketStabilityMonitor,
+    StabilityState
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +42,14 @@ class EnhancedCoherenceResult:
     """Enhanced coherence calculation result with basal dynamics"""
     traditional_gct: GCTDimensions
     basal_enhanced_gct: GCTDimensions
+    enhanced_gct_dimensions: EnhancedGCTDimensions
+    stability_state: StabilityState
     anticipation_capacity: float
     prediction_confidence: float
     symbolic_resonance: float
     adaptation_efficiency: float
+    market_coherence_score: float
+    distortion_factor: float
     reservoir_state: Dict[str, Any]
     timestamp: datetime = field(default_factory=datetime.now)
 
@@ -57,12 +67,15 @@ class GCTBasalIntegrator:
             reservoir_config = BasalReservoirConfig(
                 num_nodes=80,
                 learning_rate=0.02,
-                soulmath_coupling=0.08,
+                coherence_coupling=0.08,
                 adaptation_rate=0.002
             )
         
         self.basal_engine = BasalReservoirEngine(reservoir_config)
         self.integration_strength = integration_strength
+        
+        # Initialize enhanced GCT calculator
+        self.enhanced_calculator = EnhancedGCTCalculator()
         
         # Traditional GCT parameters
         self.gct_params = {
@@ -119,22 +132,37 @@ class GCTBasalIntegrator:
                                                               basal_coherence, 
                                                               anticipation)
             
+            # Enhanced GCT calculation using new framework
+            enhanced_market_data = {
+                'prices': [dp.price for dp in self.market_history[-20:]],
+                'volumes': [dp.volume for dp in self.market_history[-20:]],
+                'sentiment': market_data.sentiment
+            }
+            enhanced_analysis = self.enhanced_calculator.analyze_market_state(enhanced_market_data)
+            enhanced_dimensions = EnhancedGCTDimensions(**enhanced_analysis['enhanced_gct_dimensions'])
+            stability_state = StabilityState(enhanced_analysis['stability_state'])
+            
             # Compute symbolic resonance
             symbolic_resonance = self._compute_symbolic_resonance(market_data, activations)
             
-            # Prediction and confidence
-            prediction_confidence = 0.0
+            # Prediction and confidence using enhanced methods
+            prediction_confidence = enhanced_analysis['prediction_confidence']
             if enable_prediction:
-                prediction_confidence = await self._compute_prediction_confidence(market_array)
+                base_confidence = await self._compute_prediction_confidence(market_array)
+                prediction_confidence = (prediction_confidence + base_confidence) / 2
             
             # Create enhanced result
             result = EnhancedCoherenceResult(
                 traditional_gct=traditional_gct,
                 basal_enhanced_gct=enhanced_gct,
+                enhanced_gct_dimensions=enhanced_dimensions,
+                stability_state=stability_state,
                 anticipation_capacity=anticipation,
                 prediction_confidence=prediction_confidence,
                 symbolic_resonance=symbolic_resonance,
                 adaptation_efficiency=self._compute_adaptation_efficiency(),
+                market_coherence_score=enhanced_analysis['market_coherence'],
+                distortion_factor=enhanced_analysis['distortion_factor'],
                 reservoir_state=self.basal_engine.get_reservoir_state()
             )
             
@@ -371,14 +399,19 @@ class GCTBasalIntegrator:
     def _create_fallback_result(self, market_data: MarketDataPoint) -> EnhancedCoherenceResult:
         """Create fallback result in case of errors"""
         fallback_gct = GCTDimensions(psi=0.5, rho=0.5, q=0.5, f=0.5)
+        fallback_enhanced = EnhancedGCTDimensions(psi=0.5, rho=0.5, q=0.5, f=0.5)
         
         return EnhancedCoherenceResult(
             traditional_gct=fallback_gct,
             basal_enhanced_gct=fallback_gct,
+            enhanced_gct_dimensions=fallback_enhanced,
+            stability_state=StabilityState.STABLE,
             anticipation_capacity=0.0,
             prediction_confidence=0.0,
             symbolic_resonance=0.0,
             adaptation_efficiency=0.0,
+            market_coherence_score=0.5,
+            distortion_factor=0.0,
             reservoir_state={}
         )
     

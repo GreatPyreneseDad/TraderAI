@@ -233,9 +233,14 @@ class BasalMarketAnalyzer:
             if len(self.analysis_results[symbol]) > 100:
                 self.analysis_results[symbol].pop(0)
             
-            # Generate alerts if enabled
+            # Generate alerts if enabled (including stability-based alerts)
             if enable_alerts:
                 alerts = self._generate_alerts(symbol, latest_coherence, prediction)
+                
+                # Add stability-based alerts
+                stability_alerts = self._generate_stability_alerts(symbol, latest_coherence)
+                alerts.extend(stability_alerts)
+                
                 self.market_alerts.extend(alerts)
                 
                 # Trigger alert callbacks
@@ -479,6 +484,80 @@ class BasalMarketAnalyzer:
         
         return alerts
     
+    def _generate_stability_alerts(self, 
+                                  symbol: str,
+                                  coherence_result: EnhancedCoherenceResult) -> List[MarketAlert]:
+        """Generate alerts based on market stability analysis"""
+        
+        alerts = []
+        timestamp = datetime.now()
+        
+        # Stability state alerts
+        if hasattr(coherence_result, 'stability_state'):
+            if coherence_result.stability_state.value == 'REBALANCE_REQUIRED':
+                alert = MarketAlert(
+                    alert_id=f"{symbol}_stability_rebalance_{timestamp.strftime('%Y%m%d_%H%M%S')}",
+                    symbol=symbol,
+                    alert_type='stability_warning',
+                    severity='medium',
+                    message=f"Market rebalancing required - instability detected",
+                    confidence=coherence_result.prediction_confidence,
+                    coherence_data={'stability_state': coherence_result.stability_state.value},
+                    timestamp=timestamp,
+                    recommended_action="Review positions and consider reducing exposure"
+                )
+                alerts.append(alert)
+            
+            elif coherence_result.stability_state.value == 'CRITICAL':
+                alert = MarketAlert(
+                    alert_id=f"{symbol}_stability_critical_{timestamp.strftime('%Y%m%d_%H%M%S')}",
+                    symbol=symbol,
+                    alert_type='stability_critical',
+                    severity='critical',
+                    message=f"Critical market instability detected",
+                    confidence=coherence_result.prediction_confidence,
+                    coherence_data={'stability_state': coherence_result.stability_state.value},
+                    timestamp=timestamp,
+                    recommended_action="Consider immediate position review - high volatility expected"
+                )
+                alerts.append(alert)
+        
+        # Distortion alerts
+        if hasattr(coherence_result, 'distortion_factor') and coherence_result.distortion_factor > 0.7:
+            alert = MarketAlert(
+                alert_id=f"{symbol}_high_distortion_{timestamp.strftime('%Y%m%d_%H%M%S')}",
+                symbol=symbol,
+                alert_type='market_distortion',
+                severity='high',
+                message=f"High market distortion detected: {coherence_result.distortion_factor:.3f}",
+                confidence=coherence_result.prediction_confidence,
+                coherence_data={'distortion_factor': coherence_result.distortion_factor},
+                timestamp=timestamp,
+                recommended_action="Signals may be unreliable - exercise additional caution"
+            )
+            alerts.append(alert)
+        
+        # Enhanced coherence alerts
+        if hasattr(coherence_result, 'enhanced_gct_dimensions'):
+            enhanced_dims = coherence_result.enhanced_gct_dimensions
+            coherence_magnitude = enhanced_dims.coherence_magnitude()
+            
+            if coherence_magnitude > 0.9:
+                alert = MarketAlert(
+                    alert_id=f"{symbol}_enhanced_coherence_high_{timestamp.strftime('%Y%m%d_%H%M%S')}",
+                    symbol=symbol,
+                    alert_type='enhanced_coherence_spike',
+                    severity='high',
+                    message=f"Exceptional enhanced coherence: {coherence_magnitude:.3f}",
+                    confidence=coherence_result.prediction_confidence,
+                    coherence_data=enhanced_dims.to_dict(),
+                    timestamp=timestamp,
+                    recommended_action="Strong signal detected - consider increasing position confidence"
+                )
+                alerts.append(alert)
+        
+        return alerts
+    
     def _update_performance_metrics(self, predictions: List[MarketPrediction]):
         """Update performance tracking metrics"""
         
@@ -521,6 +600,16 @@ class BasalMarketAnalyzer:
                     'adaptation_efficiency': prediction.coherence_analysis.adaptation_efficiency,
                     'timestamp': prediction.coherence_analysis.timestamp.isoformat()
                 }
+                
+                # Add enhanced fields if they exist
+                if hasattr(prediction.coherence_analysis, 'enhanced_gct_dimensions'):
+                    coherence_dict['enhanced_gct_dimensions'] = asdict(prediction.coherence_analysis.enhanced_gct_dimensions)
+                if hasattr(prediction.coherence_analysis, 'stability_state'):
+                    coherence_dict['stability_state'] = prediction.coherence_analysis.stability_state.value
+                if hasattr(prediction.coherence_analysis, 'market_coherence_score'):
+                    coherence_dict['market_coherence_score'] = prediction.coherence_analysis.market_coherence_score
+                if hasattr(prediction.coherence_analysis, 'distortion_factor'):
+                    coherence_dict['distortion_factor'] = prediction.coherence_analysis.distortion_factor
                 pred_dict['coherence_analysis'] = coherence_dict
                 
                 predictions_data.append(pred_dict)
