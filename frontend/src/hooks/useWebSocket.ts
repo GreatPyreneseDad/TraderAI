@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { Socket } from 'socket.io-client'
 import { useMarketStore } from '@/stores/marketStore'
+import WebSocketManager from '@/services/websocket-manager'
 
-let socket: Socket | null = null
+const wsManager = WebSocketManager.getInstance()
 
 interface PandasAIResult {
   requestId: number;
@@ -31,21 +32,20 @@ export function useWebSocket() {
   const { updateMarketData, addAlert } = useMarketStore()
 
   useEffect(() => {
-    if (!socket) {
-      socket = io('http://localhost:3000', {
-        transports: ['websocket'],
-        autoConnect: true,
-      })
+    const socket = wsManager.connect()
+    
+    const handleConnect = () => {
+      console.log('WebSocket connected')
+      setIsConnected(true)
+    }
 
-      socket.on('connect', () => {
-        console.log('WebSocket connected')
-        setIsConnected(true)
-      })
+    const handleDisconnect = () => {
+      console.log('WebSocket disconnected')
+      setIsConnected(false)
+    }
 
-      socket.on('disconnect', () => {
-        console.log('WebSocket disconnected')
-        setIsConnected(false)
-      })
+    socket.on('connect', handleConnect)
+    socket.on('disconnect', handleDisconnect)
 
       socket.on('market-update', (data) => {
         updateMarketData(data)
@@ -87,23 +87,26 @@ export function useWebSocket() {
       socket.on('trading-signals', (data) => {
         setTradingSignals(prev => [...prev, ...data.signals])
       })
-    }
+
+    // Check initial connection state
+    setIsConnected(wsManager.isConnected())
 
     return () => {
-      if (socket) {
-        socket.disconnect()
-        socket = null
-      }
+      // Clean up event listeners but don't disconnect the singleton
+      socket.off('connect', handleConnect)
+      socket.off('disconnect', handleDisconnect)
     }
   }, [updateMarketData, addAlert])
 
   const subscribe = useCallback((symbols: string[]) => {
+    const socket = wsManager.getSocket()
     if (socket && isConnected) {
       socket.emit('subscribe', symbols)
     }
   }, [isConnected])
 
   const unsubscribe = useCallback((symbols: string[]) => {
+    const socket = wsManager.getSocket()
     if (socket && isConnected) {
       socket.emit('unsubscribe', symbols)
     }
@@ -111,6 +114,7 @@ export function useWebSocket() {
 
   // PandasAI WebSocket methods
   const sendPandasAIQuery = useCallback((query: string, symbols?: string[], timeframe?: string) => {
+    const socket = wsManager.getSocket()
     if (socket && isConnected) {
       const authToken = localStorage.getItem('authToken')
       socket.emit('pandas-ai-query', {
@@ -123,6 +127,7 @@ export function useWebSocket() {
   }, [isConnected])
 
   const detectAnomalies = useCallback((symbols?: string[]) => {
+    const socket = wsManager.getSocket()
     if (socket && isConnected) {
       const authToken = localStorage.getItem('authToken')
       socket.emit('detect-anomalies', {
@@ -133,6 +138,7 @@ export function useWebSocket() {
   }, [isConnected])
 
   const generateSignals = useCallback((strategy: string, symbols: string[]) => {
+    const socket = wsManager.getSocket()
     if (socket && isConnected) {
       const authToken = localStorage.getItem('authToken')
       socket.emit('generate-signals', {

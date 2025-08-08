@@ -188,4 +188,26 @@ export const api = {
     const response = await apiClient.post('/inference-enhanced/generate-with-signals', data)
     return response.data
   },
+
+  // Chat endpoints
+  chatPandas: async (data: {
+    query: string
+    marketData?: any[]
+  }) => {
+    const response = await apiClient.post('/chat/pandas', data)
+    return response.data
+  },
+
+  chatClaude: async (data: {
+    messages: Array<{ role: string; content: string }>
+    context?: any
+  }) => {
+    const response = await apiClient.post('/chat/claude', data)
+    return response.data
+  },
+
+  getNews: async (symbol: string) => {
+    const response = await apiClient.get(`/news/${symbol}`)
+    return response.data
+  },
 }

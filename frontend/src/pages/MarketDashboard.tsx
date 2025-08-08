@@ -6,6 +6,8 @@ import { api } from '@/services/api'
 import CoherenceChart from '@/components/CoherenceChart'
 import MarketSummaryCard from '@/components/MarketSummaryCard'
 import { useWebSocket } from '@/hooks/useWebSocket'
+import Watchlist from '@/components/Watchlist'
+import TickerSearch from '@/components/TickerSearch'
 
 export default function MarketDashboard() {
   const { selectedSymbols, marketData } = useMarketStore()
@@ -42,13 +44,26 @@ export default function MarketDashboard() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Market Dashboard</h1>
-        <p className="mt-2 text-gray-600">Real-time market intelligence powered by ECNE and GCT</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Market Dashboard</h1>
+          <p className="mt-2 text-gray-600">Real-time market intelligence powered by ECNE and GCT</p>
+        </div>
+        <div className="mt-4 sm:mt-0 w-full sm:w-64">
+          <TickerSearch />
+        </div>
       </div>
 
-      {/* Market Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left Column - Watchlist */}
+        <div className="lg:col-span-1">
+          <Watchlist />
+        </div>
+
+        {/* Right Column - Main Content */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Market Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MarketSummaryCard
           title="Top Gainers"
           icon={TrendingUp}
@@ -130,25 +145,27 @@ export default function MarketDashboard() {
         </div>
       </div>
 
-      {/* Real-time Status */}
-      <div className="card">
-        <h3 className="text-lg font-semibold mb-4">System Status</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <p className="text-gray-600">Active Symbols</p>
-            <p className="font-medium">{selectedSymbols.length}</p>
-          </div>
-          <div>
-            <p className="text-gray-600">Data Points/Min</p>
-            <p className="font-medium">200+</p>
-          </div>
-          <div>
-            <p className="text-gray-600">Latency</p>
-            <p className="font-medium text-green-600">&lt;100ms</p>
-          </div>
-          <div>
-            <p className="text-gray-600">Last Update</p>
-            <p className="font-medium">{new Date().toLocaleTimeString()}</p>
+          {/* Real-time Status */}
+          <div className="card">
+            <h3 className="text-lg font-semibold mb-4">System Status</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-gray-600">Active Symbols</p>
+                <p className="font-medium">{selectedSymbols.length}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Data Points/Min</p>
+                <p className="font-medium">200+</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Latency</p>
+                <p className="font-medium text-green-600">&lt;100ms</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Last Update</p>
+                <p className="font-medium">{new Date().toLocaleTimeString()}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

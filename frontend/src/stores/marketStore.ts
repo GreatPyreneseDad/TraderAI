@@ -3,6 +3,7 @@ import { create } from 'zustand'
 interface MarketData {
   symbol: string
   price: number
+  priceChange?: number
   volume: string
   coherenceScores: {
     psi: number
@@ -33,6 +34,8 @@ interface MarketStore {
   addAlert: (alert: Alert) => void
   acknowledgeAlert: (id: string) => void
   setSelectedSymbols: (symbols: string[]) => void
+  addSymbol: (symbol: string) => void
+  removeSymbol: (symbol: string) => void
 }
 
 export const useMarketStore = create<MarketStore>((set) => ({
@@ -62,4 +65,14 @@ export const useMarketStore = create<MarketStore>((set) => ({
 
   setSelectedSymbols: (symbols) =>
     set({ selectedSymbols: symbols }),
+
+  addSymbol: (symbol) =>
+    set((state) => ({
+      selectedSymbols: [...new Set([...state.selectedSymbols, symbol])],
+    })),
+
+  removeSymbol: (symbol) =>
+    set((state) => ({
+      selectedSymbols: state.selectedSymbols.filter(s => s !== symbol),
+    })),
 }))

@@ -53,7 +53,6 @@ model Inference {
   selectedOption  String?
   confidence      Float?
   status          InferenceStatus @default(PENDING)
-  metadata        Json?           @default("{}")
   
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt

@@ -2,9 +2,10 @@ import React from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { TrendingUp, Brain, AlertCircle, BarChart3, Home, MessageSquare } from 'lucide-react'
 import MarketDashboard from './pages/MarketDashboard'
-import InferenceCenter from './pages/InferenceCenter'
+import CoherenceInference from './pages/CoherenceInference'
 import AlertsPage from './pages/AlertsPage'
-import MarketAnalysisPage from './pages/MarketAnalysisPage'
+import MarketSentimentPage from './pages/MarketSentimentPage'
+import ChatAnalysisPage from './pages/ChatAnalysisPage'
 import { useWebSocket } from './hooks/useWebSocket'
 
 function App() {
@@ -13,7 +14,7 @@ function App() {
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Market Analysis', href: '/market', icon: TrendingUp },
+    { name: 'Market Sentiment', href: '/market', icon: TrendingUp },
     { name: 'Chat Analysis', href: '/analysis', icon: MessageSquare },
     { name: 'AI Inference', href: '/inference', icon: Brain },
     { name: 'Alerts', href: '/alerts', icon: AlertCircle },
@@ -69,9 +70,9 @@ function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Routes>
           <Route path="/" element={<MarketDashboard />} />
-          <Route path="/market" element={<MarketDashboard />} />
-          <Route path="/analysis" element={<MarketAnalysisPage />} />
-          <Route path="/inference" element={<InferenceCenter />} />
+          <Route path="/market" element={<MarketSentimentPage />} />
+          <Route path="/analysis" element={<ChatAnalysisPage />} />
+          <Route path="/inference" element={<CoherenceInference />} />
           <Route path="/alerts" element={<AlertsPage />} />
         </Routes>
       </main>

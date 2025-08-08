@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MarketAnalysisChat } from '../components/MarketAnalysisChat';
-import { Brain, TrendingUp, BarChart3, Zap } from 'lucide-react';
+import MarketSentimentGrid from '../components/MarketSentimentGrid';
+import { Brain, TrendingUp, BarChart3, Zap, Activity, MessageSquare } from 'lucide-react';
 
 const MarketAnalysisPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'sentiment' | 'chat'>('sentiment');
+  
   const features = [
     {
       icon: Brain,
@@ -28,87 +31,125 @@ const MarketAnalysisPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Tabs */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          AI-Powered Market Analysis
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Use natural language to explore and analyze market data. Ask questions, discover patterns, 
-          and get insights powered by PandasAI.
-        </p>
-        
-        {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {features.map((feature, idx) => {
-            const Icon = feature.icon;
-            return (
-              <div key={idx} className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="bg-indigo-100 rounded-lg p-2">
-                    <Icon className="w-5 h-5 text-indigo-600" />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">{feature.title}</h3>
-                  <p className="text-sm text-gray-500">{feature.description}</p>
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Market Analysis & Sentiment
+            </h1>
+            <p className="text-gray-600">
+              Real-time market sentiment analysis powered by GCT coherence theory
+            </p>
+          </div>
+          
+          {/* Tab Switcher */}
+          <div className="flex mt-4 sm:mt-0 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('sentiment')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'sentiment'
+                  ? 'bg-white text-gray-900 shadow'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Activity className="inline-block w-4 h-4 mr-2" />
+              Market Sentiment
+            </button>
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === 'chat'
+                  ? 'bg-white text-gray-900 shadow'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <MessageSquare className="inline-block w-4 h-4 mr-2" />
+              AI Chat Analysis
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Analysis Chat */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <MarketAnalysisChat />
-        </div>
-        
-        {/* Quick Stats */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Stats</h3>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-500">Total Symbols Tracked</p>
-                <p className="text-2xl font-semibold text-gray-900">127</p>
+      {/* Tab Content */}
+      {activeTab === 'sentiment' ? (
+        <MarketSentimentGrid />
+      ) : (
+        <>
+          {/* Features for Chat */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {features.map((feature, idx) => {
+              const Icon = feature.icon;
+              return (
+                <div key={idx} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="bg-indigo-100 rounded-lg p-2">
+                        <Icon className="w-5 h-5 text-indigo-600" />
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900">{feature.title}</h3>
+                      <p className="text-sm text-gray-500">{feature.description}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Analysis Chat */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <MarketAnalysisChat />
+            </div>
+            
+            {/* Quick Stats */}
+            <div className="space-y-4">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Stats</h3>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Symbols Tracked</p>
+                    <p className="text-2xl font-semibold text-gray-900">127</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Data Points Analyzed</p>
+                    <p className="text-2xl font-semibold text-gray-900">1.2M+</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Average Query Time</p>
+                    <p className="text-2xl font-semibold text-gray-900">1.3s</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Data Points Analyzed</p>
-                <p className="text-2xl font-semibold text-gray-900">1.2M+</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Average Query Time</p>
-                <p className="text-2xl font-semibold text-gray-900">1.3s</p>
+              
+              {/* Tips */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Pro Tips</h3>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-start">
+                    <span className="text-indigo-600 mr-2">•</span>
+                    <span>Use specific symbol names for targeted analysis</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-indigo-600 mr-2">•</span>
+                    <span>Ask for correlations to discover relationships</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-indigo-600 mr-2">•</span>
+                    <span>Request charts by adding "plot" or "visualize"</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-indigo-600 mr-2">•</span>
+                    <span>Combine coherence metrics with price analysis</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
-          
-          {/* Tips */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Pro Tips</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start">
-                <span className="text-indigo-600 mr-2">•</span>
-                <span>Use specific symbol names for targeted analysis</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-indigo-600 mr-2">•</span>
-                <span>Ask for correlations to discover relationships</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-indigo-600 mr-2">•</span>
-                <span>Request charts by adding "plot" or "visualize"</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-indigo-600 mr-2">•</span>
-                <span>Combine coherence metrics with price analysis</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { body, query, validationResult } from 'express-validator';
+import { body, validationResult } from 'express-validator';
 import axios from 'axios';
 import { logger } from '../utils/logger';
 import { AuthRequest } from '../middleware/auth.middleware';

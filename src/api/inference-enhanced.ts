@@ -163,14 +163,15 @@ router.post('/generate-enhanced',
           conservative: inferenceResponse.conservative,
           progressive: inferenceResponse.progressive,
           synthetic: inferenceResponse.synthetic,
-          status: 'COMPLETED',
-          metadata: {
-            enhanced: true,
-            hasDataAnalysis: !!dataAnalysis,
-            analysisQuery: analysisQuery || null,
-            symbols: symbols || [],
-            coherenceScores
-          }
+          status: 'COMPLETED'
+          // TODO: Add metadata field to schema
+          // metadata: {
+          //   enhanced: true,
+          //   hasDataAnalysis: !!dataAnalysis,
+          //   analysisQuery: analysisQuery || null,
+          //   symbols: symbols || [],
+          //   coherenceScores
+          // }
         }
       });
 
@@ -211,7 +212,7 @@ router.post('/generate-enhanced',
         },
         analysis: dataAnalysis ? {
           result: dataAnalysis,
-          metadata: marketInsights
+          insights: marketInsights  // renamed from metadata
         } : null,
         marketData: {
           symbols,
@@ -283,11 +284,12 @@ router.post('/generate-with-anomalies',
           conservative: inferenceResponse.conservative,
           progressive: inferenceResponse.progressive,
           synthetic: inferenceResponse.synthetic,
-          status: 'COMPLETED',
-          metadata: {
-            hasAnomalies: contextWithAnomalies.hasAnomalies,
-            anomalyCount: anomalies?.length || 0
-          }
+          status: 'COMPLETED'
+          // TODO: Add metadata field to schema
+          // metadata: {
+          //   hasAnomalies: contextWithAnomalies.hasAnomalies,
+          //   anomalyCount: anomalies?.length || 0
+          // }
         }
       });
 
@@ -362,11 +364,12 @@ router.post('/generate-with-signals',
           conservative: inferenceResponse.conservative,
           progressive: inferenceResponse.progressive,
           synthetic: inferenceResponse.synthetic,
-          status: 'COMPLETED',
-          metadata: {
-            strategy,
-            hasSignals: !!signals
-          }
+          status: 'COMPLETED'
+          // TODO: Add metadata field to schema
+          // metadata: {
+          //   strategy,
+          //   hasSignals: !!signals
+          // }
         }
       });
 
