@@ -94,7 +94,7 @@ router.post('/analyze',
 
     } catch (error) {
       logger.error('Debate analysis error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
@@ -144,7 +144,7 @@ router.get('/results/:id',
 
     } catch (error) {
       logger.error('Debate results error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
@@ -220,7 +220,7 @@ router.post('/vote',
 
     } catch (error) {
       logger.error('Vote error:', error);
-      next(error);
+      return next(error);
     }
   }
 );

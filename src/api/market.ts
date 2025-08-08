@@ -2,7 +2,6 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { query, param, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { ECNEService } from '../services/ecne-service';
-import { GCTService } from '../services/gct-service';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -88,7 +87,7 @@ router.get('/coherence',
 
     } catch (error) {
       logger.error('Coherence fetch error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
@@ -199,7 +198,7 @@ router.get('/symbols/:symbol',
 
     } catch (error) {
       logger.error('Symbol data fetch error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
@@ -231,7 +230,7 @@ router.post('/subscribe',
 
     } catch (error) {
       logger.error('Subscribe error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
@@ -278,7 +277,7 @@ router.get('/alerts',
 
     } catch (error) {
       logger.error('Alerts fetch error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
@@ -306,14 +305,14 @@ router.put('/alerts/:id/acknowledge',
 
     } catch (error) {
       logger.error('Alert acknowledge error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
 
 // Get market summary
 router.get('/summary',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (_req: Request, res: Response, next: NextFunction) => {
     try {
       // Get top movers by coherence change
       const oneDayAgo = new Date();
@@ -393,7 +392,7 @@ router.get('/summary',
 
     } catch (error) {
       logger.error('Summary fetch error:', error);
-      next(error);
+      return next(error);
     }
   }
 );

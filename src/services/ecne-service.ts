@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { ECNE } from '../../ecne-core/src/ecne';
+import { ECNEDataRiver } from '@ecne/ecne';
 import { logger } from '../utils/logger';
 
 export interface ECNEConfig {
@@ -10,7 +10,7 @@ export interface ECNEConfig {
 }
 
 export class ECNEService extends EventEmitter {
-  private ecne: ECNE;
+  private ecne: ECNEDataRiver;
   private config: ECNEConfig;
 
   constructor(config: ECNEConfig) {
@@ -21,58 +21,66 @@ export class ECNEService extends EventEmitter {
   async initialize() {
     try {
       // Initialize ECNE Data River
-      this.ecne = new ECNE({
-        sources: [
-          {
-            id: 'tiingo-rest',
-            type: 'rest',
-            url: 'https://api.tiingo.com/tiingo/daily/prices',
-            headers: {
-              'Authorization': `Token ${process.env.TIINGO_API_TOKEN}`
-            },
-            rateLimit: { requests: 100, period: 60000 }
-          },
-          {
-            id: 'tiingo-websocket',
-            type: 'websocket',
-            url: 'wss://api.tiingo.com/iex',
-            auth: {
-              token: process.env.TIINGO_API_TOKEN
-            }
+      this.ecne = new ECNEDataRiver({
+        filter: {
+          coherenceThresholds: {
+            psi: 0.7,
+            rho: 0.6,
+            q: 0.5,
+            f: 0.4
           }
-        ],
-        coherenceThresholds: {
-          psi: 0.7,
-          rho: 0.6,
-          q: 0.5,
-          f: 0.4
         },
-        performance: {
+        collector: {
           maxConcurrent: this.config.maxConcurrent,
-          batchSize: this.config.batchSize,
-          cache: {
-            maxItems: this.config.cacheMaxItems,
-            ttl: this.config.cacheTTL
-          }
+          batchSize: this.config.batchSize
+        },
+        cache: {
+          enabled: true,
+          maxMemoryItems: this.config.cacheMaxItems,
+          defaultTTL: this.config.cacheTTL
+        },
+        dashboard: {
+          enabled: false
         }
       });
 
+      // Add data sources
+      const sources = [
+        {
+          id: 'tiingo-rest',
+          type: 'rest' as const,
+          url: 'https://api.tiingo.com/tiingo/daily/prices',
+          headers: {
+            'Authorization': `Token ${process.env.TIINGO_API_TOKEN}`
+          },
+          rateLimit: { requests: 100, period: 60000 }
+        },
+        {
+          id: 'tiingo-websocket',
+          type: 'websocket' as const,
+          url: 'wss://api.tiingo.com/iex',
+          auth: {
+            token: process.env.TIINGO_API_TOKEN
+          }
+        }
+      ];
+
       // Set up event handlers
-      this.ecne.on('data', (data) => {
+      this.ecne.on('data', (data: any) => {
         this.emit('data', data);
       });
 
-      this.ecne.on('error', (error) => {
+      this.ecne.on('error', (error: any) => {
         logger.error('ECNE error:', error);
         this.emit('error', error);
       });
 
-      this.ecne.on('coherence-alert', (alert) => {
+      this.ecne.on('coherence-alert', (alert: any) => {
         logger.info('Coherence alert:', alert);
         this.emit('coherence-alert', alert);
       });
 
-      await this.ecne.start();
+      await this.ecne.start(sources);
       logger.info('ECNE Data River started successfully');
 
     } catch (error) {

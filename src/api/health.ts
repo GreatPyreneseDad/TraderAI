@@ -6,7 +6,7 @@ const router = Router();
 const prisma = new PrismaClient();
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   const health = {
     status: 'ok',
     timestamp: new Date().toISOString(),

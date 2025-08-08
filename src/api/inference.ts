@@ -32,7 +32,7 @@ router.post('/generate',
       }
 
       const { query, context, userId, symbols } = req.body;
-      const { claudeService, gctService } = getServices(req);
+      const { claudeService } = getServices(req);
 
       // Get market data if symbols provided
       let marketData = null;
@@ -151,7 +151,7 @@ router.post('/generate',
 
     } catch (error) {
       logger.error('Inference generation error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
@@ -231,7 +231,7 @@ router.post('/verify',
 
     } catch (error) {
       logger.error('Verification error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
@@ -269,7 +269,7 @@ router.get('/history/:userId',
 
     } catch (error) {
       logger.error('History fetch error:', error);
-      next(error);
+      return next(error);
     }
   }
 );
@@ -290,7 +290,7 @@ router.post('/feedback',
       }
 
       // Store feedback (you might want to create a Feedback table)
-      const { inferenceId, userId, rating, feedback } = req.body;
+      const { inferenceId, userId, rating } = req.body;
       
       logger.info('Feedback received:', { inferenceId, userId, rating });
 
@@ -301,7 +301,7 @@ router.post('/feedback',
 
     } catch (error) {
       logger.error('Feedback error:', error);
-      next(error);
+      return next(error);
     }
   }
 );

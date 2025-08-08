@@ -121,7 +121,7 @@ app.use('/api/health', healthRoutes);
 app.use('/dashboard', express.static(path.join(__dirname, '../dashboard/dist')));
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error('Unhandled error:', err);
   res.status(err.status || 500).json({
     error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
