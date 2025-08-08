@@ -19,7 +19,7 @@ export const errorHandler = (
   err: any,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   const correlationId = (req.headers['x-correlation-id'] as string) || uuidv4();
   
