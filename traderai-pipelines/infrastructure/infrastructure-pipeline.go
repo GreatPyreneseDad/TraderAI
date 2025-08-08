@@ -12,38 +12,49 @@ import (
 )
 
 // TraderAI Infrastructure Pipeline
-// Manages Docker services, database setup, and system infrastructure
+// Manages Podman services, database setup, and system infrastructure
 
-// CheckDockerStatus verifies Docker daemon is running
-func CheckDockerStatus(args sdk.Arguments) error {
-	log.Println("🐳 Checking Docker status...")
+// CheckPodmanStatus verifies Podman is running and available
+func CheckPodmanStatus(args sdk.Arguments) error {
+	log.Println("🐳 Checking Podman status...")
 	
-	cmd := exec.Command("docker", "version")
+	cmd := exec.Command("podman", "version")
 	output, err := cmd.CombinedOutput()
 	
 	if err != nil {
-		return fmt.Errorf("Docker is not running or not installed: %v\nOutput: %s", err, output)
+		return fmt.Errorf("Podman is not running or not installed: %v\nOutput: %s", err, output)
 	}
 	
-	log.Println("✅ Docker is running")
+	// Check if Podman machine is running on macOS
+	cmd = exec.Command("podman", "machine", "list", "--format", "{{.Running}}")
+	output, err = cmd.Output()
+	if err == nil && !strings.Contains(string(output), "true") {
+		log.Println("⚠️  Podman machine not running, attempting to start...")
+		cmd = exec.Command("podman", "machine", "start")
+		if err := cmd.Run(); err != nil {
+			log.Printf("⚠️  Failed to start Podman machine: %v", err)
+		}
+	}
+	
+	log.Println("✅ Podman is running")
 	return nil
 }
 
-// PullDockerImages pulls required Docker images
-func PullDockerImages(args sdk.Arguments) error {
-	log.Println("📥 Pulling Docker images...")
+// PullPodmanImages pulls required Podman images
+func PullPodmanImages(args sdk.Arguments) error {
+	log.Println("📥 Pulling Podman images...")
 	
 	images := []string{
-		"postgres:15-alpine",
-		"redis:7-alpine",
-		"nginx:alpine",
-		"prom/prometheus:latest",
-		"grafana/grafana:latest",
+		"docker.io/library/postgres:15-alpine",
+		"docker.io/library/redis:7-alpine",
+		"docker.io/library/caddy:alpine",
+		"quay.io/prometheus/prometheus:latest",
+		"docker.io/grafana/grafana:latest",
 	}
 	
 	for _, image := range images {
 		log.Printf("📥 Pulling %s...", image)
-		cmd := exec.Command("docker", "pull", image)
+		cmd := exec.Command("podman", "pull", image)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		
@@ -55,13 +66,13 @@ func PullDockerImages(args sdk.Arguments) error {
 		}
 	}
 	
-	log.Println("✅ Docker image pulling complete")
+	log.Println("✅ Podman image pulling complete")
 	return nil
 }
 
-// CreateNetworks creates Docker networks for service communication
+// CreateNetworks creates Podman networks for service communication
 func CreateNetworks(args sdk.Arguments) error {
-	log.Println("🌐 Creating Docker networks...")
+	log.Println("🌐 Creating Podman networks...")
 	
 	networks := []string{
 		"traderai-network",
@@ -69,14 +80,14 @@ func CreateNetworks(args sdk.Arguments) error {
 	
 	for _, network := range networks {
 		// Check if network exists
-		cmd := exec.Command("docker", "network", "inspect", network)
+		cmd := exec.Command("podman", "network", "inspect", network)
 		if err := cmd.Run(); err == nil {
 			log.Printf("📡 Network %s already exists", network)
 			continue
 		}
 		
 		// Create network
-		cmd = exec.Command("docker", "network", "create", "--driver", "bridge", network)
+		cmd = exec.Command("podman", "network", "create", "--driver", "bridge", network)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to create network %s: %v", network, err)
 		}
@@ -84,31 +95,33 @@ func CreateNetworks(args sdk.Arguments) error {
 		log.Printf("✅ Created network: %s", network)
 	}
 	
-	log.Println("✅ Docker networks ready")
+	log.Println("✅ Podman networks ready")
 	return nil
 }
 
-// CreateVolumes creates Docker volumes for persistent data
+// CreateVolumes creates Podman volumes for persistent data
 func CreateVolumes(args sdk.Arguments) error {
-	log.Println("💾 Creating Docker volumes...")
+	log.Println("💾 Creating Podman volumes...")
 	
 	volumes := []string{
 		"postgres_data",
 		"redis_data",
 		"prometheus_data",
 		"grafana_data",
+		"caddy_data",
+		"caddy_config",
 	}
 	
 	for _, volume := range volumes {
 		// Check if volume exists
-		cmd := exec.Command("docker", "volume", "inspect", volume)
+		cmd := exec.Command("podman", "volume", "inspect", volume)
 		if err := cmd.Run(); err == nil {
 			log.Printf("💽 Volume %s already exists", volume)
 			continue
 		}
 		
 		// Create volume
-		cmd = exec.Command("docker", "volume", "create", volume)
+		cmd = exec.Command("podman", "volume", "create", volume)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to create volume %s: %v", volume, err)
 		}
@@ -116,7 +129,7 @@ func CreateVolumes(args sdk.Arguments) error {
 		log.Printf("✅ Created volume: %s", volume)
 	}
 	
-	log.Println("✅ Docker volumes ready")
+	log.Println("✅ Podman volumes ready")
 	return nil
 }
 
@@ -125,15 +138,15 @@ func StartPostgreSQL(args sdk.Arguments) error {
 	log.Println("🗄️ Starting PostgreSQL database...")
 	
 	// Check if container is already running
-	cmd := exec.Command("docker", "ps", "--filter", "name=traderai-postgres", "--format", "{{.Names}}")
+	cmd := exec.Command("podman", "ps", "--filter", "name=traderai-postgres", "--format", "{{.Names}}")
 	output, err := cmd.Output()
 	if err == nil && strings.Contains(string(output), "traderai-postgres") {
 		log.Println("📊 PostgreSQL container already running")
 		return nil
 	}
 	
-	// Start PostgreSQL with docker-compose
-	cmd = exec.Command("docker-compose", "up", "-d", "postgres")
+	// Start PostgreSQL with podman-compose
+	cmd = exec.Command("podman-compose", "-f", "podman-compose.yml", "up", "-d", "postgres")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	
@@ -156,15 +169,15 @@ func StartRedis(args sdk.Arguments) error {
 	log.Println("🔴 Starting Redis cache...")
 	
 	// Check if container is already running
-	cmd := exec.Command("docker", "ps", "--filter", "name=traderai-redis", "--format", "{{.Names}}")
+	cmd := exec.Command("podman", "ps", "--filter", "name=traderai-redis", "--format", "{{.Names}}")
 	output, err := cmd.Output()
 	if err == nil && strings.Contains(string(output), "traderai-redis") {
 		log.Println("📊 Redis container already running")
 		return nil
 	}
 	
-	// Start Redis with docker-compose
-	cmd = exec.Command("docker-compose", "up", "-d", "redis")
+	// Start Redis with podman-compose
+	cmd = exec.Command("podman-compose", "-f", "podman-compose.yml", "up", "-d", "redis")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	
@@ -197,7 +210,7 @@ func SetupDatabase(args sdk.Arguments) error {
 		log.Println("🔄 Attempting alternative database setup...")
 		
 		// Create database if it doesn't exist
-		cmd = exec.Command("docker", "exec", "traderai-postgres", "createdb", "-U", "traderai", "traderai")
+		cmd = exec.Command("podman", "exec", "traderai-postgres", "createdb", "-U", "traderai", "traderai")
 		cmd.Run() // Ignore error if database already exists
 		
 		// Run migrations if available
@@ -227,7 +240,7 @@ func StartMonitoring(args sdk.Arguments) error {
 	log.Println("📊 Starting monitoring services...")
 	
 	// Start Prometheus and Grafana
-	cmd := exec.Command("docker-compose", "up", "-d", "prometheus", "grafana")
+	cmd := exec.Command("podman-compose", "-f", "podman-compose.yml", "up", "-d", "prometheus", "grafana")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	
@@ -280,24 +293,24 @@ func ShowStatus(args sdk.Arguments) error {
 	log.Println("================================")
 	
 	// Show running containers
-	cmd := exec.Command("docker", "ps", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}")
+	cmd := exec.Command("podman", "ps", "--format", "table {{.Names}}\t{{.Status}}\t{{.Ports}}")
 	output, err := cmd.Output()
 	if err == nil {
 		log.Printf("🐳 Running Containers:\n%s", string(output))
 	}
 	
 	// Show volumes
-	cmd = exec.Command("docker", "volume", "ls", "--format", "table {{.Name}}\t{{.Driver}}")
+	cmd = exec.Command("podman", "volume", "ls", "--format", "table {{.Name}}\t{{.Driver}}")
 	output, err = cmd.Output()
 	if err == nil {
-		log.Printf("\n💾 Docker Volumes:\n%s", string(output))
+		log.Printf("\n💾 Podman Volumes:\n%s", string(output))
 	}
 	
 	// Show networks
-	cmd = exec.Command("docker", "network", "ls", "--format", "table {{.Name}}\t{{.Driver}}")
+	cmd = exec.Command("podman", "network", "ls", "--format", "table {{.Name}}\t{{.Driver}}")
 	output, err = cmd.Output()
 	if err == nil {
-		log.Printf("\n🌐 Docker Networks:\n%s", string(output))
+		log.Printf("\n🌐 Podman Networks:\n%s", string(output))
 	}
 	
 	log.Println("\n✅ Status report complete")
@@ -308,7 +321,7 @@ func ShowStatus(args sdk.Arguments) error {
 func StopServices(args sdk.Arguments) error {
 	log.Println("🛑 Stopping infrastructure services...")
 	
-	cmd := exec.Command("docker-compose", "down")
+	cmd := exec.Command("podman-compose", "-f", "podman-compose.yml", "down")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	
@@ -327,22 +340,22 @@ func CleanupResources(args sdk.Arguments) error {
 	cleanLevel := args.GetString("level")
 	
 	// Stop services
-	cmd := exec.Command("docker-compose", "down", "-v")
+	cmd := exec.Command("podman-compose", "-f", "podman-compose.yml", "down", "-v")
 	cmd.Run()
 	
 	if cleanLevel == "deep" {
 		log.Println("🗑️ Performing deep cleanup...")
 		
 		// Remove volumes
-		cmd = exec.Command("docker", "volume", "prune", "-f")
+		cmd = exec.Command("podman", "volume", "prune", "-f")
 		cmd.Run()
 		
 		// Remove networks
-		cmd = exec.Command("docker", "network", "prune", "-f")
+		cmd = exec.Command("podman", "network", "prune", "-f")
 		cmd.Run()
 		
 		// Remove unused images
-		cmd = exec.Command("docker", "image", "prune", "-f")
+		cmd = exec.Command("podman", "image", "prune", "-f")
 		cmd.Run()
 		
 		log.Println("✅ Deep cleanup complete")
@@ -377,12 +390,12 @@ func waitForRedis() error {
 }
 
 func checkPostgreSQL() error {
-	cmd := exec.Command("docker", "exec", "traderai-postgres", "pg_isready", "-U", "traderai")
+	cmd := exec.Command("podman", "exec", "traderai-postgres", "pg_isready", "-U", "traderai")
 	return cmd.Run()
 }
 
 func checkRedis() error {
-	cmd := exec.Command("docker", "exec", "traderai-redis", "redis-cli", "--auth", "redis123", "ping")
+	cmd := exec.Command("podman", "exec", "traderai-redis", "redis-cli", "--auth", "redis123", "ping")
 	output, err := cmd.Output()
 	if err != nil || !strings.Contains(string(output), "PONG") {
 		return fmt.Errorf("Redis not responding correctly")
@@ -391,14 +404,14 @@ func checkRedis() error {
 }
 
 func checkNetworks() error {
-	cmd := exec.Command("docker", "network", "inspect", "traderai-network")
+	cmd := exec.Command("podman", "network", "inspect", "traderai-network")
 	return cmd.Run()
 }
 
 func checkVolumes() error {
 	volumes := []string{"postgres_data", "redis_data"}
 	for _, volume := range volumes {
-		cmd := exec.Command("docker", "volume", "inspect", volume)
+		cmd := exec.Command("podman", "volume", "inspect", volume)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("volume %s not found", volume)
 		}
@@ -409,27 +422,27 @@ func checkVolumes() error {
 func main() {
 	jobs := sdk.Jobs{
 		sdk.Job{
-			Handler:     CheckDockerStatus,
-			Title:       "Check Docker Status",
-			Description: "Verify Docker daemon is running",
+			Handler:     CheckPodmanStatus,
+			Title:       "Check Podman Status",
+			Description: "Verify Podman is running and available",
 		},
 		sdk.Job{
-			Handler:     PullDockerImages,
-			Title:       "Pull Docker Images",
-			Description: "Pull required Docker images",
-			DependsOn:   []string{"Check Docker Status"},
+			Handler:     PullPodmanImages,
+			Title:       "Pull Podman Images",
+			Description: "Pull required Podman images",
+			DependsOn:   []string{"Check Podman Status"},
 		},
 		sdk.Job{
 			Handler:     CreateNetworks,
 			Title:       "Create Networks",
-			Description: "Create Docker networks for service communication",
-			DependsOn:   []string{"Check Docker Status"},
+			Description: "Create Podman networks for service communication",
+			DependsOn:   []string{"Check Podman Status"},
 		},
 		sdk.Job{
 			Handler:     CreateVolumes,
 			Title:       "Create Volumes",
-			Description: "Create Docker volumes for persistent data",
-			DependsOn:   []string{"Check Docker Status"},
+			Description: "Create Podman volumes for persistent data",
+			DependsOn:   []string{"Check Podman Status"},
 		},
 		sdk.Job{
 			Handler:     StartPostgreSQL,
@@ -474,7 +487,7 @@ func main() {
 		sdk.Job{
 			Handler:     CleanupResources,
 			Title:       "Cleanup Resources",
-			Description: "Remove all Docker resources",
+			Description: "Remove all Podman resources",
 		},
 	}
 	

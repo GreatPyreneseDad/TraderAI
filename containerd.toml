@@ -1,0 +1,127 @@
+# TraderAI containerd configuration
+# Modern container runtime with security and performance optimizations
+
+version = 2
+oom_score = 0
+
+[plugins]
+  # Container Runtime Interface configuration
+  [plugins."io.containerd.grpc.v1.cri"]
+    enable_selinux = true
+    sandbox_image = "registry.k8s.io/pause:3.9"
+    max_container_log_line_size = 16384
+    max_concurrent_downloads = 3
+
+    # Image registry configuration
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = "/etc/containerd/certs.d"
+
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+          endpoint = ["https://registry-1.docker.io"]
+
+    # Container runtime settings
+    [plugins."io.containerd.grpc.v1.cri".containerd]
+      default_runtime_name = "runc"
+      disable_snapshot_annotations = false
+      discard_unpacked_layers = true
+      snapshotter = "overlayfs"
+
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+          runtime_type = "io.containerd.runc.v2"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+            BinaryName = "runc"
+            Root = ""
+            CriuImagePath = ""
+            CriuPath = ""
+            CriuWorkPath = ""
+            IoGid = 0
+            IoUid = 0
+            NoNewKeyring = false
+            NoPivotRoot = false
+            SystemdCgroup = true
+
+    # CNI network configuration
+    [plugins."io.containerd.grpc.v1.cri".cni]
+      bin_dir = "/opt/cni/bin"
+      conf_dir = "/etc/cni/net.d"
+      max_conf_num = 1
+      conf_template = "/etc/containerd/cni-template.conf"
+
+  # Image management
+  [plugins."io.containerd.snapshotter.v1.overlayfs"]
+    root_path = "/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs"
+    upperdir_label = true
+
+  # Content management
+  [plugins."io.containerd.content.v1.content"]
+    gc_policy = [
+      {
+        all = false
+        filters = ["type==exec.cachemount", "type==source.local"]
+        keep_duration = "168h"
+        keep_tag_revisions = 1
+      }
+    ]
+
+  # Runtime configuration
+  [plugins."io.containerd.runtime.v1.linux"]
+    shim = "containerd-shim"
+    runtime = "runc"
+    runtime_root = ""
+    no_shim = false
+    shim_debug = false
+
+# Storage configuration
+[grpc]
+  address = "/run/containerd/containerd.sock"
+  tcp_address = ""
+  tcp_tls_cert = ""
+  tcp_tls_key = ""
+  uid = 0
+  gid = 0
+  max_recv_message_size = 16777216
+  max_send_message_size = 16777216
+
+# Security and performance settings
+[metrics]
+  address = "127.0.0.1:1338"
+  grpc_histogram = false
+
+# Debugging configuration
+[debug]
+  address = "/run/containerd/debug.sock"
+  uid = 0
+  gid = 0
+  level = "info"
+
+# Proxy configuration for air-gapped environments
+[proxy_plugins]
+
+# Stream server configuration
+[stream_processors]
+
+# Time synchronization
+[timeouts]
+  "io.containerd.timeout.shim.cleanup" = "5s"
+  "io.containerd.timeout.shim.load" = "5s"
+  "io.containerd.timeout.shim.shutdown" = "3s"
+  "io.containerd.timeout.task.state" = "2s"
+
+# TraderAI specific optimizations
+[plugins."io.containerd.grpc.v1.cri".x509_key_pair_streaming]
+  tls_cert_file = ""
+  tls_private_key_file = ""
+
+# Advanced image handling for TraderAI services
+[plugins."io.containerd.grpc.v1.cri".image_decryption]
+  key_model = "node"
+
+# Resource management for trading workloads
+[plugins."io.containerd.grpc.v1.cri".device_ownership_from_security_context]
+  enabled = true
+
+# Container lifecycle management
+[plugins."io.containerd.grpc.v1.cri".restrict_oom_score_adj]
+  enabled = false

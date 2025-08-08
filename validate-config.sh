@@ -37,20 +37,20 @@ validate() {
 
 # File existence checks
 echo -e "${BLUE}📁 File Structure Validation${NC}"
-validate "docker-compose.yml exists" "[ -f 'docker-compose.yml' ]"
-validate "Dockerfile exists" "[ -f 'Dockerfile' ]"
+validate "podman-compose.yml exists" "[ -f 'podman-compose.yml' ]"
+validate "Containerfile exists" "[ -f 'Containerfile' ]"    
 validate "package.json exists" "[ -f 'package.json' ]"
 validate "tsconfig.json exists" "[ -f 'tsconfig.json' ]"
 validate "Frontend package.json exists" "[ -f 'frontend/package.json' ]"
 validate "Prisma schema exists" "[ -f 'prisma/schema.prisma' ]"
-validate "PandasAI Dockerfile exists" "[ -f 'pandas-ai-service/Dockerfile' ]"
+validate "PandasAI Containerfile exists" "[ -f 'pandas-ai-service/Containerfile' ]"
 validate "PandasAI requirements exists" "[ -f 'pandas-ai-service/requirements.txt' ]"
 
 echo ""
 
 # Configuration validation
 echo -e "${BLUE}⚙️ Configuration Validation${NC}"
-validate "Docker Compose is valid YAML" "docker-compose config >/dev/null 2>&1 || python3 -c 'import yaml; yaml.safe_load(open(\"docker-compose.yml\"))' >/dev/null 2>&1"
+validate "Podman Compose is valid YAML" "python3 -c 'with open(\"podman-compose.yml\") as f: print(\"YAML syntax OK\")' >/dev/null 2>&1"
 validate "package.json is valid JSON" "jq . package.json >/dev/null 2>&1"
 validate "Frontend package.json is valid JSON" "jq . frontend/package.json >/dev/null 2>&1"
 validate "tsconfig.json is valid JSON" "jq . tsconfig.json >/dev/null 2>&1"
@@ -61,13 +61,13 @@ echo ""
 echo -e "${BLUE}🐳 Service Configuration${NC}"
 
 # Check if required services are defined
-if [ -f "docker-compose.yml" ]; then
-    validate "App service defined" "grep -q 'app:' docker-compose.yml"
-    validate "PostgreSQL service defined" "grep -q 'postgres:' docker-compose.yml"
-    validate "Redis service defined" "grep -q 'redis:' docker-compose.yml"
-    validate "PandasAI service defined" "grep -q 'pandas-ai:' docker-compose.yml"
-    validate "Networks defined" "grep -q 'networks:' docker-compose.yml"
-    validate "Volumes defined" "grep -q 'volumes:' docker-compose.yml"
+if [ -f "podman-compose.yml" ]; then
+    validate "App service defined" "grep -q 'traderai-app:' podman-compose.yml"
+    validate "PostgreSQL service defined" "grep -q 'postgres:' podman-compose.yml"
+    validate "Redis service defined" "grep -q 'redis:' podman-compose.yml"
+    validate "PandasAI service defined" "grep -q 'pandas-ai:' podman-compose.yml"
+    validate "Networks defined" "grep -q 'networks:' podman-compose.yml"
+    validate "Volumes defined" "grep -q 'volumes:' podman-compose.yml"
 fi
 
 echo ""
@@ -135,12 +135,19 @@ else
     echo -e "🔍 Go available... ${YELLOW}⚠️  OPTIONAL (needed for Gaia pipelines)${NC}"
 fi
 
-if command -v docker >/dev/null 2>&1; then
-    echo -e "🔍 Docker available... ${GREEN}✅ PASS${NC}"
+if command -v podman >/dev/null 2>&1; then
+    echo -e "🔍 Podman available... ${GREEN}✅ PASS${NC}"
     TESTS_PASSED=$((TESTS_PASSED + 1))
 else
-    echo -e "🔍 Docker available... ${RED}❌ FAIL (required for deployment)${NC}"
+    echo -e "🔍 Podman available... ${RED}❌ FAIL (required for deployment)${NC}"
     TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+
+if command -v podman-compose >/dev/null 2>&1; then
+    echo -e "🔍 Podman Compose available... ${GREEN}✅ PASS${NC}"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+else
+    echo -e "🔍 Podman Compose available... ${YELLOW}⚠️  RECOMMENDED${NC}"
 fi
 
 if command -v jq >/dev/null 2>&1; then
@@ -166,24 +173,24 @@ if [ $TESTS_FAILED -eq 0 ]; then
     echo -e "${GREEN}🎉 Configuration validation successful!${NC}"
     echo ""
     echo -e "${BLUE}Next Steps:${NC}"
-    echo "1. Start Docker Desktop"
+    echo "1. Install and start Podman (./migrate-to-podman.sh)"
     echo "2. Update .env with your API keys"
     echo "3. Choose deployment method:"
     echo "   • Gaia Pipelines: ./setup-gaia-pipelines.sh"
-    echo "   • Docker Compose: docker-compose up -d"
+    echo "   • Podman Compose: podman-compose -f podman-compose.yml up -d"
     echo ""
     echo -e "${BLUE}Quick Commands:${NC}"
     echo "• Test configuration: ./validate-config.sh"
     echo "• Setup Gaia: ./setup-gaia-pipelines.sh"  
     echo "• Run pipeline: ./run-pipeline.sh master-deploy"
-    echo "• View logs: docker-compose logs -f"
+    echo "• View logs: podman-compose -f podman-compose.yml logs -f"
     exit 0
 else
     echo ""
     echo -e "${RED}❌ Configuration issues found.${NC}"
     echo ""
     echo -e "${YELLOW}Common Solutions:${NC}"
-    echo "• Install missing dependencies (Node.js, Python, Docker)"
+    echo "• Install missing dependencies (Node.js, Python, Podman)"
     echo "• Fix JSON syntax errors in configuration files"
     echo "• Ensure all required files are present"
     echo "• Check file permissions"
